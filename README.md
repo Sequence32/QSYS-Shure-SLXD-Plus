@@ -3,6 +3,8 @@
 
 # QSYS Shure SLX-D Plus Plugin
 
+![Shure SLX-D Plus Receiver](slxphoto.png)
+
 A Q-SYS scripted plugin for controlling and monitoring the **Shure SLX-D Plus** wireless receiver system via TCP.
 
 ## Features
