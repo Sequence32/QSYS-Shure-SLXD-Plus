@@ -1,3 +1,6 @@
+> [!WARNING]
+> **⚠️ UNTESTED / IN DEVELOPMENT** — This plugin has not yet been tested against real hardware. Use with caution and expect bugs. Feedback and testing reports are welcome.
+
 # QSYS Shure SLX-D Plus Plugin
 
 A Q-SYS scripted plugin for controlling and monitoring the **Shure SLX-D Plus** wireless receiver system via TCP.
@@ -28,14 +31,14 @@ A Q-SYS scripted plugin for controlling and monitoring the **Shure SLX-D Plus** 
 | Control | Type | Description |
 |---|---|---|
 | `chan_name_N` | Text (R/W) | Channel name (max 31 chars) |
-| `frequency_N` | Text (R/W) | Frequency display in MHz; set via 7-digit kHz (e.g. `0518125`) |
+| `frequency_N` | Text (R/W) | Frequency in MHz (set via 7-digit kHz, e.g. `0518125`) |
 | `group_chan_N` | Text | Group and channel number |
 | `audio_gain_N` | Knob (R/W) | Audio gain –18 to +42 dB |
 | `audio_mute_N` | Button (R/W) | Audio mute toggle |
 | `link_status_N` | LED | Green when transmitter is linked |
 | `link_status_txt_N` | Text | "Linked" or "No TX" |
 | `tx_model_N` | Text | Linked transmitter model |
-| `interference_N` | LED | Lit red on critical interference |
+| `interference_N` | LED | Lit when critical interference detected |
 | `batt_bars_N` | Text | Battery level (e.g. `4/5`) |
 | `batt_mins_N` | Text | Estimated battery runtime in minutes |
 | `audio_peak_N` | Meter | Audio peak level (dBFS) |
@@ -54,14 +57,14 @@ A Q-SYS scripted plugin for controlling and monitoring the **Shure SLX-D Plus** 
 - **TCP Port:** `2202`
 - **No authentication required**
 - Commands are framed with angle brackets: `< COMMAND channel ATTRIBUTE value >`
-- The plugin sends `< GET 0 ALL >` (device info) and `< GET N ALL >` (per channel) on connect
+- On connect, the plugin sends `< GET 0 ALL >` (device info) and `< GET N ALL >` (per channel)
 - Meter data is pushed by the receiver as `< SAMPLE N ALL audPeak audRms rfRssi >` once `METER_RATE` is set
 - Frequency values from the device are in Hz (7 digits); displayed as MHz
 - Gain values from the device are `000–060`; mapped to `–18 to +42 dB`
 
 ## Installation
 
-1. Copy `Shure_SLXD_Plus.qplug` to your Q-SYS Plugins folder:  
+1. Copy `Shure_SLXD_Plus.qplug` to your Q-SYS Plugins folder:
    `C:\Users\<user>\Documents\QSC\Q-SYS Designer\Plugins`
 2. Restart Q-SYS Designer
 3. Find the plugin under **Scripted Components** in the component library
@@ -72,8 +75,3 @@ A Q-SYS scripted plugin for controlling and monitoring the **Shure SLX-D Plus** 
 
 - Q-SYS Designer 9.x and later
 - Shure SLX-D Plus receiver (any channel count 1–4)
-
-## Author
-
-TEL Systems  
-https://github.com/Sequence32
