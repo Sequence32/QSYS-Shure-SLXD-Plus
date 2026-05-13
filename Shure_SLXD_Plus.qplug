@@ -1,14 +1,14 @@
 -- Shure SLX-D Plus Q-SYS Plugin
--- TEL Systems | v1.1.0
+-- v1.2.0
 -- TCP Port 2202 | No authentication required
 -- Protocol: < COMMAND channel ATTRIBUTE value >
 
 PluginInfo = {
   Name      = "Shure SLX-D Plus",
-  Version   = "1.1.0",
-  BuildVersion = "1.1.0.1",
+  Version   = "1.2.0",
+  BuildVersion = "1.2.0.1",
   Id        = "shure-slxd-plus",
-  Author    = "TEL Systems",
+  Author    = "Sequence32",
   Description = "Controls Shure SLX-D Plus receivers via TCP (port 2202)"
 }
 
@@ -59,12 +59,15 @@ function GetControls(props)
     table.insert(c, { Name="group_chan_"..s,      ControlType="Indicator", IndicatorType="Text", UserPin=true, PinStyle="Output", Count=1 })
     table.insert(c, { Name="audio_gain_"..s,      ControlType="Knob",      ControlUnit="dB", Min=-18, Max=42, UserPin=true, PinStyle="Both", Count=1 })
     table.insert(c, { Name="audio_mute_"..s,      ControlType="Button",    ButtonType="Toggle", UserPin=true, PinStyle="Both", Count=1 })
+    -- Status
     table.insert(c, { Name="link_status_"..s,     ControlType="Indicator", IndicatorType="Led",  UserPin=true, PinStyle="Output", Count=1 })
     table.insert(c, { Name="link_status_txt_"..s, ControlType="Indicator", IndicatorType="Text", UserPin=true, PinStyle="Output", Count=1 })
     table.insert(c, { Name="tx_model_"..s,        ControlType="Indicator", IndicatorType="Text", UserPin=true, PinStyle="Output", Count=1 })
     table.insert(c, { Name="interference_"..s,    ControlType="Indicator", IndicatorType="Led",  UserPin=true, PinStyle="Output", Count=1 })
+    -- Battery
     table.insert(c, { Name="batt_bars_"..s,       ControlType="Indicator", IndicatorType="Text", UserPin=true, PinStyle="Output", Count=1 })
     table.insert(c, { Name="batt_mins_"..s,        ControlType="Indicator", IndicatorType="Text", UserPin=true, PinStyle="Output", Count=1 })
+    -- Meters
     table.insert(c, { Name="audio_peak_"..s,      ControlType="Indicator", IndicatorType="Meter", ControlUnit="dBFS", Min=-120, Max=0, UserPin=true, PinStyle="Output", Count=1 })
     table.insert(c, { Name="rssi_"..s,            ControlType="Indicator", IndicatorType="Meter", ControlUnit="dBm",  Min=-120, Max=0, UserPin=true, PinStyle="Output", Count=1 })
   end
@@ -80,14 +83,16 @@ function GetControlLayout(props)
   local W   = 380
   local x, y = 0, 0
 
+  -- Header
   table.insert(graphics, { Type="Header", Text="Shure SLX-D Plus Receiver", Position={x,y}, Size={W,24}, FontSize=12, HTextAlign="Center" })
   y = y + 28
 
+  -- Device Info box
   table.insert(graphics, { Type="GroupBox", Text="Device", Position={x,y}, Size={W,80}, FontSize=10 })
   layout["connection_led"]   = { Style="Led",  Position={x+8,  y+20}, Size={16,16} }
   layout["connection_state"] = { Style="Text", Position={x+28, y+20}, Size={110,18}, FontSize=9 }
   table.insert(graphics, { Type="Text", Text="Model:", Position={x+148,y+20}, Size={44,18}, FontSize=9, HTextAlign="Right" })
-  layout["model"]     = { Style="Text", Position={x+196, y+20}, Size={176, 18}, FontSize=9 }
+  layout["model"]   = { Style="Text", Position={x+196, y+20}, Size={176, 18}, FontSize=9 }
   table.insert(graphics, { Type="Text", Text="Device ID:", Position={x+8,  y+44}, Size={56,18}, FontSize=9, HTextAlign="Right" })
   layout["device_id"] = { Style="Text", Position={x+68,  y+44}, Size={90, 18}, FontSize=9 }
   table.insert(graphics, { Type="Text", Text="FW:", Position={x+166,y+44}, Size={28,18}, FontSize=9, HTextAlign="Right" })
@@ -96,36 +101,44 @@ function GetControlLayout(props)
   layout["rf_band"]   = { Style="Text", Position={x+332, y+44}, Size={40, 18}, FontSize=9 }
   y = y + 84
 
+  -- Channels
   for i = 1, cnt do
     local s    = tostring(i)
     local boxH = 170
     table.insert(graphics, { Type="GroupBox", Text="Channel "..i, Position={x,y}, Size={W, boxH}, FontSize=10 })
 
+    -- Row 1: Name / Freq / Group:Chan
     table.insert(graphics, { Type="Text", Text="Name:", Position={x+8,y+20}, Size={44,18}, FontSize=9, HTextAlign="Right" })
     layout["chan_name_"..s] = { Style="Text", Position={x+56,y+20}, Size={110,18}, FontSize=9 }
-    table.insert(graphics, { Type="Text", Text="Freq:", Position={x+170,y+20}, Size={44,18}, FontSize=9, HTextAlign="Right" })
-    layout["frequency_"..s] = { Style="Text", Position={x+218,y+20}, Size={112,18}, FontSize=9 }
-
+    -- FIX: Label corrected to "Freq (MHz)" to match the displayed format
+    table.insert(graphics, { Type="Text", Text="Freq (MHz):", Position={x+170,y+20}, Size={66,18}, FontSize=9, HTextAlign="Right" })
+    layout["frequency_"..s] = { Style="Text", Position={x+240,y+20}, Size={90,18}, FontSize=9 }
     table.insert(graphics, { Type="Text", Text="Grp:Ch:", Position={x+8,y+42}, Size={44,18}, FontSize=9, HTextAlign="Right" })
     layout["group_chan_"..s] = { Style="Text", Position={x+56,y+42}, Size={60,18}, FontSize=9 }
+
+    -- Row 2: Link / TX Model / Interference
     table.insert(graphics, { Type="Text", Text="TX Link:", Position={x+120,y+42}, Size={44,18}, FontSize=9, HTextAlign="Right" })
     layout["link_status_"..s]     = { Style="Led",  Position={x+168, y+44}, Size={14,14} }
     layout["link_status_txt_"..s] = { Style="Text", Position={x+186, y+42}, Size={80,18}, FontSize=9 }
     layout["interference_"..s]    = { Style="Led",  Position={x+270, y+44}, Size={14,14} }
     table.insert(graphics, { Type="Text", Text="Intrfr", Position={x+286,y+42}, Size={36,18}, FontSize=8 })
 
+    -- Row 3: TX Model
     table.insert(graphics, { Type="Text", Text="TX Model:", Position={x+8,y+64}, Size={56,18}, FontSize=9, HTextAlign="Right" })
     layout["tx_model_"..s] = { Style="Text", Position={x+68,y+64}, Size={150,18}, FontSize=9 }
 
+    -- Row 4: Battery
     table.insert(graphics, { Type="Text", Text="Battery:", Position={x+8,y+86}, Size={56,18}, FontSize=9, HTextAlign="Right" })
     layout["batt_bars_"..s] = { Style="Text", Position={x+68,  y+86}, Size={36,18}, FontSize=9 }
     layout["batt_mins_"..s] = { Style="Text", Position={x+108, y+86}, Size={90,18}, FontSize=9 }
 
+    -- Row 5: Gain + Mute (right column)
     table.insert(graphics, { Type="Text", Text="Gain (dB):", Position={x+210,y+64}, Size={60,18}, FontSize=9, HTextAlign="Right" })
     layout["audio_gain_"..s] = { Style="Knob",   Position={x+274, y+54}, Size={40,40}, FontSize=8 }
     table.insert(graphics, { Type="Text", Text="Mute:", Position={x+318,y+64}, Size={36,18}, FontSize=9, HTextAlign="Right" })
     layout["audio_mute_"..s] = { Style="Button", Legend="MUTE", Color={180,0,0}, OffColor={40,40,40}, Position={x+340,y+86}, Size={32,20}, FontSize=8 }
 
+    -- Row 6: Meters
     table.insert(graphics, { Type="Text", Text="Audio:", Position={x+8,y+112}, Size={56,18}, FontSize=9, HTextAlign="Right" })
     layout["audio_peak_"..s] = { Style="Meter", Position={x+68,y+114}, Size={160,16} }
     table.insert(graphics, { Type="Text", Text="RF:", Position={x+8,y+134}, Size={56,18}, FontSize=9, HTextAlign="Right" })
@@ -154,13 +167,15 @@ if Controls then
   }
   local meter_rate_val = METER_RATE_MAP[ Properties["Meter Rate"].Value ] or "00000"
 
+  -- ===== helpers =====
   local function trim(s)
     return s:match("^%s*(.-)%s*$")
   end
 
   local function send_cmd(cmd)
     if sock.IsConnected then
-      sock:Write("< " .. cmd .. " >")
+      local full = "< " .. cmd .. " >"
+      sock:Write(full)
     end
   end
 
@@ -189,11 +204,15 @@ if Controls then
     for i = 1, channel_count do clear_channel(i) end
   end
 
+  -- ===== initialization sequence after connect =====
   local function initialize_device()
+    -- Query device-level info (channel 0)
     send_cmd("GET 0 ALL")
+    -- Query each channel individually for full per-channel data
     for i = 1, channel_count do
       send_cmd("GET " .. i .. " ALL")
     end
+    -- Set metering rate per channel
     if meter_rate_val ~= "00000" then
       for i = 1, channel_count do
         send_cmd("SET " .. i .. " METER_RATE " .. meter_rate_val)
@@ -201,68 +220,94 @@ if Controls then
     end
   end
 
+  -- ===== attribute parser =====
   local function parse_attribute(ch_str, key, val)
-    local v = trim(val)
+    local val_trimmed = trim(val)
+
     if ch_str == "0" then
-      if     key == "MODEL"     then Controls.model.String     = v
-      elseif key == "DEVICE_ID" then Controls.device_id.String = v
-      elseif key == "FW_VER"    then Controls.firmware.String  = v
-      elseif key == "RF_BAND"   then Controls.rf_band.String   = v
+      -- Device-level
+      if     key == "MODEL"     then Controls.model.String     = val_trimmed
+      elseif key == "DEVICE_ID" then Controls.device_id.String = val_trimmed
+      elseif key == "FW_VER"    then Controls.firmware.String  = val_trimmed
+      elseif key == "RF_BAND"   then Controls.rf_band.String   = val_trimmed
       end
     else
       local ch_num = tonumber(ch_str)
       if not ch_num or ch_num < 1 or ch_num > channel_count then return end
       local s = ch_str
+
       if key == "CHAN_NAME" then
-        Controls["chan_name_"..s].String = v
+        Controls["chan_name_"..s].String = val_trimmed
+
       elseif key == "FREQUENCY" then
-        local hz = tonumber(v)
-        if hz then
-          Controls["frequency_"..s].String = string.format("%.3f MHz", hz / 1000)
+        -- Shure SLX-D+ reports frequency in kHz (e.g. 0518125 = 518.125 MHz)
+        -- Display as MHz with 3 decimal places
+        local khz = tonumber(val_trimmed)
+        if khz then
+          Controls["frequency_"..s].String = string.format("%.3f MHz", khz / 1000)
         else
-          Controls["frequency_"..s].String = v
+          Controls["frequency_"..s].String = val_trimmed
         end
+
       elseif key == "GROUP_CHANNEL" then
-        Controls["group_chan_"..s].String = v
+        Controls["group_chan_"..s].String = val_trimmed
+
       elseif key == "AUDIO_GAIN" then
-        local g = tonumber(v)
+        -- 000-060 maps to -18 to +42 dB (offset of 18)
+        local g = tonumber(val_trimmed)
         if g then Controls["audio_gain_"..s].Value = g - 18 end
+
       elseif key == "AUDIO_MUTE" then
-        Controls["audio_mute_"..s].Boolean = (v == "ON")
+        Controls["audio_mute_"..s].Boolean = (val_trimmed == "ON")
+
       elseif key == "LINK_STATUS" then
-        local linked = (v == "LINKED")
+        local linked = (val_trimmed == "LINKED")
         Controls["link_status_"..s].Value      = linked and 1 or 0
         Controls["link_status_txt_"..s].String = linked and "Linked" or "No TX"
-      elseif key == "LINK_TX_MODEL" or key == "TX_TYPE" then
-        Controls["tx_model_"..s].String = v
+
+      -- FIX: Removed non-existent TX_TYPE key; LINK_TX_MODEL is the correct Shure attribute
+      elseif key == "LINK_TX_MODEL" then
+        Controls["tx_model_"..s].String = val_trimmed
+
       elseif key == "INTERFERENCE_STATUS" then
-        Controls["interference_"..s].Value = (v == "CRITICAL") and 1 or 0
+        Controls["interference_"..s].Value = (val_trimmed == "CRITICAL") and 1 or 0
+
       elseif key == "TX_BATT_BARS" then
-        local b = tonumber(v)
+        local b = tonumber(val_trimmed)
         if     b == 255 then Controls["batt_bars_"..s].String = "No TX"
         elseif b        then Controls["batt_bars_"..s].String = b .. "/5"
         end
+
       elseif key == "TX_BATT_MINS" then
-        local m = tonumber(v)
+        local m = tonumber(val_trimmed)
         if     m == 65535 then Controls["batt_mins_"..s].String = "Unknown"
         elseif m == 65534 then Controls["batt_mins_"..s].String = "Calculating..."
         elseif m == 65533 then Controls["batt_mins_"..s].String = "Warning"
         elseif m          then Controls["batt_mins_"..s].String = m .. " min"
         end
+
       end
     end
   end
 
+  -- ===== message parser =====
   local function parse_msg(msg)
+    -- Shure format: "REP channel ATTRIBUTE {value}" or "REP channel ATTRIBUTE value"
     local cmd_type, body = msg:match("^(%u+)%s+(.*)")
     if not cmd_type then return end
+
     if cmd_type == "REP" then
+      -- Match channel number, attribute name, then value (which may be wrapped in {})
       local ch, key, val = body:match("^(%d+)%s+([%u_]+)%s+(.*)")
       if ch and key and val then
+        -- Strip braces if present: {SomeName}
         val = val:match("^{(.*)}$") or val
         parse_attribute(ch, key, val)
       end
+
     elseif cmd_type == "SAMPLE" then
+      -- Format: SAMPLE channel ALL audPeak audRms rfRssi
+      -- Values 000-120, real value = reported - 120
       local ch, audPeak, audRms, rfRssi = body:match("^(%d+)%s+ALL%s+(%d+)%s+(%d+)%s+(%d+)")
       local ch_num = tonumber(ch)
       if ch_num and ch_num >= 1 and ch_num <= channel_count then
@@ -272,6 +317,7 @@ if Controls then
     end
   end
 
+  -- ===== buffer processing - messages delimited by < > =====
   local function process_buffer()
     while true do
       local s = rx_buffer:find("<", 1, true)
@@ -281,17 +327,20 @@ if Controls then
         rx_buffer = rx_buffer:sub(e + 1)
         if msg ~= "" then parse_msg(msg) end
       else
+        -- Discard leading garbage (no opening bracket)
         if not s and #rx_buffer > 200 then rx_buffer = "" end
         break
       end
     end
   end
 
+  -- ===== control event handlers =====
   for i = 1, channel_count do
     local s  = tostring(i)
     local ch = tostring(i)
 
     Controls["audio_gain_"..s].EventHandler = function(ctrl)
+      -- Convert dB value back to Shure 000-060 format
       local raw = math.max(0, math.min(60, math.floor(ctrl.Value + 18 + 0.5)))
       send_cmd("SET " .. ch .. " AUDIO_GAIN " .. string.format("%03d", raw))
     end
@@ -301,20 +350,36 @@ if Controls then
     end
 
     Controls["chan_name_"..s].EventHandler = function(ctrl)
+      -- Max 31 characters, wrapped in braces per Shure spec
       local name = ctrl.String:sub(1, 31)
       send_cmd("SET " .. ch .. " CHAN_NAME {" .. name .. "}")
     end
 
     Controls["frequency_"..s].EventHandler = function(ctrl)
-      local raw = ctrl.String:gsub("[^%d]", "")
-      if #raw == 7 then
-        send_cmd("SET " .. ch .. " FREQUENCY " .. raw)
+      -- User may enter either:
+      --   7-digit kHz raw value: "0518125"
+      --   MHz display value:     "518.125 MHz" or "518.125"
+      -- FIX: Strip non-digit/non-dot chars, detect format, convert to 7-digit kHz
+      local raw_str = trim(ctrl.String):gsub("[%s][Mm][Hh][Zz]$", ""):gsub("[^%d%.]", "")
+      local num = tonumber(raw_str)
+      if num then
+        local khz_val
+        -- If number > 1000, assume it's already in kHz (e.g. 518125)
+        -- If number < 1000, assume it's in MHz (e.g. 518.125)
+        if num > 1000 then
+          khz_val = math.floor(num)
+        else
+          khz_val = math.floor(num * 1000 + 0.5)
+        end
+        local khz_str = string.format("%07d", khz_val)
+        send_cmd("SET " .. ch .. " FREQUENCY " .. khz_str)
       else
-        print("[SLXD+] Invalid frequency for ch" .. ch .. ": enter 7-digit kHz e.g. 0518125")
+        print("[SLXD+] Invalid frequency for ch" .. ch .. ": '" .. ctrl.String .. "' - enter MHz (e.g. 518.125) or 7-digit kHz (e.g. 0518125)")
       end
     end
   end
 
+  -- ===== TCP socket event handler =====
   sock.EventHandler = function(s, evt, err)
     if evt == TcpSocket.Events.Connected then
       Controls.connection_state.String = "Connected"
@@ -322,20 +387,27 @@ if Controls then
       rx_buffer = ""
       print("[SLXD+] Connected to " .. Properties["IP Address"].Value)
       initialize_device()
+
     elseif evt == TcpSocket.Events.Data then
       rx_buffer = rx_buffer .. s:Read(s.BufferLength)
       process_buffer()
+
     elseif evt == TcpSocket.Events.Closed then
+      -- FIX: Clear all stale data on disconnect
+      clear_all()
       Controls.connection_state.String = "Closed"
-      Controls.connection_led.Value    = 0
       print("[SLXD+] Connection closed")
+
     elseif evt == TcpSocket.Events.Error then
-      Controls.connection_state.String = "Error"
-      Controls.connection_led.Value    = 0
+      -- FIX: Clear all stale data on error
+      clear_all()
+      Controls.connection_state.String = "Error: " .. tostring(err)
       print("[SLXD+] Error: " .. tostring(err))
+
     elseif evt == TcpSocket.Events.Reconnect then
       Controls.connection_state.String = "Reconnecting..."
       Controls.connection_led.Value    = 0
+      -- Clear stale meter data while waiting to reconnect
       for i = 1, channel_count do
         Controls["audio_peak_"..i].Value = -120
         Controls["rssi_"..i].Value       = -120
@@ -343,6 +415,7 @@ if Controls then
     end
   end
 
+  -- ===== init =====
   clear_all()
   local ip = Properties["IP Address"].Value
   if ip and ip ~= "" then
@@ -353,6 +426,6 @@ if Controls then
     Controls.connection_state.String = "No IP configured"
   end
 
-  print("[SLXD+] v1.1.0 started | Channels: " .. channel_count .. " | Meter rate: " .. Properties["Meter Rate"].Value)
+  print("[SLXD+] Plugin v1.2.0 started | Channels: " .. channel_count .. " | Meter rate: " .. Properties["Meter Rate"].Value)
 
 end
