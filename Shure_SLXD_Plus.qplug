@@ -1,0 +1,358 @@
+-- Shure SLX-D Plus Q-SYS Plugin
+-- TEL Systems | v1.1.0
+-- TCP Port 2202 | No authentication required
+-- Protocol: < COMMAND channel ATTRIBUTE value >
+
+PluginInfo = {
+  Name      = "Shure SLX-D Plus",
+  Version   = "1.1.0",
+  BuildVersion = "1.1.0.1",
+  Id        = "shure-slxd-plus",
+  Author    = "TEL Systems",
+  Description = "Controls Shure SLX-D Plus receivers via TCP (port 2202)"
+}
+
+function GetColor(props)
+  return { 0, 163, 108 }
+end
+
+function GetPrettyName(props)
+  local ip = props["IP Address"].Value
+  return "Shure SLX-D+ [" .. (ip ~= "" and ip or "unset") .. "]"
+end
+
+-- ==================== PROPERTIES ====================
+function GetProperties()
+  return {
+    { Name = "IP Address",    Type = "string",  Value = "192.168.1.100" },
+    { Name = "Channel Count", Type = "integer", Value = 1, Min = 1, Max = 4 },
+    {
+      Name = "Meter Rate", Type = "enum",
+      Choices = { "Disabled", "100ms", "200ms", "500ms", "1000ms", "2000ms" },
+      Value = "200ms"
+    },
+  }
+end
+
+function RectifyProperties(props)
+  return props
+end
+
+-- ==================== CONTROLS ====================
+function GetControls(props)
+  local c   = {}
+  local cnt = props["Channel Count"].Value
+
+  -- Device-level indicators
+  table.insert(c, { Name="connection_state", ControlType="Indicator", IndicatorType="Text", UserPin=true, PinStyle="Output", Count=1 })
+  table.insert(c, { Name="connection_led",   ControlType="Indicator", IndicatorType="Led",  UserPin=true, PinStyle="Output", Count=1 })
+  table.insert(c, { Name="model",            ControlType="Indicator", IndicatorType="Text", UserPin=true, PinStyle="Output", Count=1 })
+  table.insert(c, { Name="device_id",        ControlType="Indicator", IndicatorType="Text", UserPin=true, PinStyle="Output", Count=1 })
+  table.insert(c, { Name="firmware",         ControlType="Indicator", IndicatorType="Text", UserPin=true, PinStyle="Output", Count=1 })
+  table.insert(c, { Name="rf_band",          ControlType="Indicator", IndicatorType="Text", UserPin=true, PinStyle="Output", Count=1 })
+
+  -- Per-channel controls
+  for i = 1, cnt do
+    local s = tostring(i)
+    table.insert(c, { Name="chan_name_"..s,      ControlType="Text",      UserPin=true, PinStyle="Both",   Count=1 })
+    table.insert(c, { Name="frequency_"..s,      ControlType="Text",      UserPin=true, PinStyle="Both",   Count=1 })
+    table.insert(c, { Name="group_chan_"..s,      ControlType="Indicator", IndicatorType="Text", UserPin=true, PinStyle="Output", Count=1 })
+    table.insert(c, { Name="audio_gain_"..s,      ControlType="Knob",      ControlUnit="dB", Min=-18, Max=42, UserPin=true, PinStyle="Both", Count=1 })
+    table.insert(c, { Name="audio_mute_"..s,      ControlType="Button",    ButtonType="Toggle", UserPin=true, PinStyle="Both", Count=1 })
+    table.insert(c, { Name="link_status_"..s,     ControlType="Indicator", IndicatorType="Led",  UserPin=true, PinStyle="Output", Count=1 })
+    table.insert(c, { Name="link_status_txt_"..s, ControlType="Indicator", IndicatorType="Text", UserPin=true, PinStyle="Output", Count=1 })
+    table.insert(c, { Name="tx_model_"..s,        ControlType="Indicator", IndicatorType="Text", UserPin=true, PinStyle="Output", Count=1 })
+    table.insert(c, { Name="interference_"..s,    ControlType="Indicator", IndicatorType="Led",  UserPin=true, PinStyle="Output", Count=1 })
+    table.insert(c, { Name="batt_bars_"..s,       ControlType="Indicator", IndicatorType="Text", UserPin=true, PinStyle="Output", Count=1 })
+    table.insert(c, { Name="batt_mins_"..s,        ControlType="Indicator", IndicatorType="Text", UserPin=true, PinStyle="Output", Count=1 })
+    table.insert(c, { Name="audio_peak_"..s,      ControlType="Indicator", IndicatorType="Meter", ControlUnit="dBFS", Min=-120, Max=0, UserPin=true, PinStyle="Output", Count=1 })
+    table.insert(c, { Name="rssi_"..s,            ControlType="Indicator", IndicatorType="Meter", ControlUnit="dBm",  Min=-120, Max=0, UserPin=true, PinStyle="Output", Count=1 })
+  end
+
+  return c
+end
+
+-- ==================== LAYOUT ====================
+function GetControlLayout(props)
+  local layout   = {}
+  local graphics = {}
+  local cnt = props["Channel Count"].Value
+  local W   = 380
+  local x, y = 0, 0
+
+  table.insert(graphics, { Type="Header", Text="Shure SLX-D Plus Receiver", Position={x,y}, Size={W,24}, FontSize=12, HTextAlign="Center" })
+  y = y + 28
+
+  table.insert(graphics, { Type="GroupBox", Text="Device", Position={x,y}, Size={W,80}, FontSize=10 })
+  layout["connection_led"]   = { Style="Led",  Position={x+8,  y+20}, Size={16,16} }
+  layout["connection_state"] = { Style="Text", Position={x+28, y+20}, Size={110,18}, FontSize=9 }
+  table.insert(graphics, { Type="Text", Text="Model:", Position={x+148,y+20}, Size={44,18}, FontSize=9, HTextAlign="Right" })
+  layout["model"]     = { Style="Text", Position={x+196, y+20}, Size={176, 18}, FontSize=9 }
+  table.insert(graphics, { Type="Text", Text="Device ID:", Position={x+8,  y+44}, Size={56,18}, FontSize=9, HTextAlign="Right" })
+  layout["device_id"] = { Style="Text", Position={x+68,  y+44}, Size={90, 18}, FontSize=9 }
+  table.insert(graphics, { Type="Text", Text="FW:", Position={x+166,y+44}, Size={28,18}, FontSize=9, HTextAlign="Right" })
+  layout["firmware"]  = { Style="Text", Position={x+198, y+44}, Size={90, 18}, FontSize=9 }
+  table.insert(graphics, { Type="Text", Text="Band:", Position={x+292,y+44}, Size={36,18}, FontSize=9, HTextAlign="Right" })
+  layout["rf_band"]   = { Style="Text", Position={x+332, y+44}, Size={40, 18}, FontSize=9 }
+  y = y + 84
+
+  for i = 1, cnt do
+    local s    = tostring(i)
+    local boxH = 170
+    table.insert(graphics, { Type="GroupBox", Text="Channel "..i, Position={x,y}, Size={W, boxH}, FontSize=10 })
+
+    table.insert(graphics, { Type="Text", Text="Name:", Position={x+8,y+20}, Size={44,18}, FontSize=9, HTextAlign="Right" })
+    layout["chan_name_"..s] = { Style="Text", Position={x+56,y+20}, Size={110,18}, FontSize=9 }
+    table.insert(graphics, { Type="Text", Text="Freq:", Position={x+170,y+20}, Size={44,18}, FontSize=9, HTextAlign="Right" })
+    layout["frequency_"..s] = { Style="Text", Position={x+218,y+20}, Size={112,18}, FontSize=9 }
+
+    table.insert(graphics, { Type="Text", Text="Grp:Ch:", Position={x+8,y+42}, Size={44,18}, FontSize=9, HTextAlign="Right" })
+    layout["group_chan_"..s] = { Style="Text", Position={x+56,y+42}, Size={60,18}, FontSize=9 }
+    table.insert(graphics, { Type="Text", Text="TX Link:", Position={x+120,y+42}, Size={44,18}, FontSize=9, HTextAlign="Right" })
+    layout["link_status_"..s]     = { Style="Led",  Position={x+168, y+44}, Size={14,14} }
+    layout["link_status_txt_"..s] = { Style="Text", Position={x+186, y+42}, Size={80,18}, FontSize=9 }
+    layout["interference_"..s]    = { Style="Led",  Position={x+270, y+44}, Size={14,14} }
+    table.insert(graphics, { Type="Text", Text="Intrfr", Position={x+286,y+42}, Size={36,18}, FontSize=8 })
+
+    table.insert(graphics, { Type="Text", Text="TX Model:", Position={x+8,y+64}, Size={56,18}, FontSize=9, HTextAlign="Right" })
+    layout["tx_model_"..s] = { Style="Text", Position={x+68,y+64}, Size={150,18}, FontSize=9 }
+
+    table.insert(graphics, { Type="Text", Text="Battery:", Position={x+8,y+86}, Size={56,18}, FontSize=9, HTextAlign="Right" })
+    layout["batt_bars_"..s] = { Style="Text", Position={x+68,  y+86}, Size={36,18}, FontSize=9 }
+    layout["batt_mins_"..s] = { Style="Text", Position={x+108, y+86}, Size={90,18}, FontSize=9 }
+
+    table.insert(graphics, { Type="Text", Text="Gain (dB):", Position={x+210,y+64}, Size={60,18}, FontSize=9, HTextAlign="Right" })
+    layout["audio_gain_"..s] = { Style="Knob",   Position={x+274, y+54}, Size={40,40}, FontSize=8 }
+    table.insert(graphics, { Type="Text", Text="Mute:", Position={x+318,y+64}, Size={36,18}, FontSize=9, HTextAlign="Right" })
+    layout["audio_mute_"..s] = { Style="Button", Legend="MUTE", Color={180,0,0}, OffColor={40,40,40}, Position={x+340,y+86}, Size={32,20}, FontSize=8 }
+
+    table.insert(graphics, { Type="Text", Text="Audio:", Position={x+8,y+112}, Size={56,18}, FontSize=9, HTextAlign="Right" })
+    layout["audio_peak_"..s] = { Style="Meter", Position={x+68,y+114}, Size={160,16} }
+    table.insert(graphics, { Type="Text", Text="RF:", Position={x+8,y+134}, Size={56,18}, FontSize=9, HTextAlign="Right" })
+    layout["rssi_"..s]       = { Style="Meter", Position={x+68,y+136}, Size={160,16} }
+
+    y = y + boxH + 4
+  end
+
+  return layout, graphics
+end
+
+-- ==================== RUNTIME ====================
+if Controls then
+
+  local sock          = TcpSocket.New()
+  local rx_buffer     = ""
+  local channel_count = Properties["Channel Count"].Value
+
+  local METER_RATE_MAP = {
+    ["Disabled"] = "00000",
+    ["100ms"]    = "00100",
+    ["200ms"]    = "00200",
+    ["500ms"]    = "00500",
+    ["1000ms"]   = "01000",
+    ["2000ms"]   = "02000",
+  }
+  local meter_rate_val = METER_RATE_MAP[ Properties["Meter Rate"].Value ] or "00000"
+
+  local function trim(s)
+    return s:match("^%s*(.-)%s*$")
+  end
+
+  local function send_cmd(cmd)
+    if sock.IsConnected then
+      sock:Write("< " .. cmd .. " >")
+    end
+  end
+
+  local function clear_channel(i)
+    local s = tostring(i)
+    Controls["chan_name_"..s].String       = "--"
+    Controls["frequency_"..s].String       = "--"
+    Controls["group_chan_"..s].String       = "--"
+    Controls["tx_model_"..s].String        = "--"
+    Controls["link_status_"..s].Value      = 0
+    Controls["link_status_txt_"..s].String = "No TX"
+    Controls["interference_"..s].Value     = 0
+    Controls["batt_bars_"..s].String       = "--"
+    Controls["batt_mins_"..s].String       = "--"
+    Controls["audio_peak_"..s].Value       = -120
+    Controls["rssi_"..s].Value             = -120
+  end
+
+  local function clear_all()
+    Controls.connection_state.String = "Disconnected"
+    Controls.connection_led.Value    = 0
+    Controls.model.String     = "--"
+    Controls.device_id.String = "--"
+    Controls.firmware.String  = "--"
+    Controls.rf_band.String   = "--"
+    for i = 1, channel_count do clear_channel(i) end
+  end
+
+  local function initialize_device()
+    send_cmd("GET 0 ALL")
+    for i = 1, channel_count do
+      send_cmd("GET " .. i .. " ALL")
+    end
+    if meter_rate_val ~= "00000" then
+      for i = 1, channel_count do
+        send_cmd("SET " .. i .. " METER_RATE " .. meter_rate_val)
+      end
+    end
+  end
+
+  local function parse_attribute(ch_str, key, val)
+    local v = trim(val)
+    if ch_str == "0" then
+      if     key == "MODEL"     then Controls.model.String     = v
+      elseif key == "DEVICE_ID" then Controls.device_id.String = v
+      elseif key == "FW_VER"    then Controls.firmware.String  = v
+      elseif key == "RF_BAND"   then Controls.rf_band.String   = v
+      end
+    else
+      local ch_num = tonumber(ch_str)
+      if not ch_num or ch_num < 1 or ch_num > channel_count then return end
+      local s = ch_str
+      if key == "CHAN_NAME" then
+        Controls["chan_name_"..s].String = v
+      elseif key == "FREQUENCY" then
+        local hz = tonumber(v)
+        if hz then
+          Controls["frequency_"..s].String = string.format("%.3f MHz", hz / 1000)
+        else
+          Controls["frequency_"..s].String = v
+        end
+      elseif key == "GROUP_CHANNEL" then
+        Controls["group_chan_"..s].String = v
+      elseif key == "AUDIO_GAIN" then
+        local g = tonumber(v)
+        if g then Controls["audio_gain_"..s].Value = g - 18 end
+      elseif key == "AUDIO_MUTE" then
+        Controls["audio_mute_"..s].Boolean = (v == "ON")
+      elseif key == "LINK_STATUS" then
+        local linked = (v == "LINKED")
+        Controls["link_status_"..s].Value      = linked and 1 or 0
+        Controls["link_status_txt_"..s].String = linked and "Linked" or "No TX"
+      elseif key == "LINK_TX_MODEL" or key == "TX_TYPE" then
+        Controls["tx_model_"..s].String = v
+      elseif key == "INTERFERENCE_STATUS" then
+        Controls["interference_"..s].Value = (v == "CRITICAL") and 1 or 0
+      elseif key == "TX_BATT_BARS" then
+        local b = tonumber(v)
+        if     b == 255 then Controls["batt_bars_"..s].String = "No TX"
+        elseif b        then Controls["batt_bars_"..s].String = b .. "/5"
+        end
+      elseif key == "TX_BATT_MINS" then
+        local m = tonumber(v)
+        if     m == 65535 then Controls["batt_mins_"..s].String = "Unknown"
+        elseif m == 65534 then Controls["batt_mins_"..s].String = "Calculating..."
+        elseif m == 65533 then Controls["batt_mins_"..s].String = "Warning"
+        elseif m          then Controls["batt_mins_"..s].String = m .. " min"
+        end
+      end
+    end
+  end
+
+  local function parse_msg(msg)
+    local cmd_type, body = msg:match("^(%u+)%s+(.*)")
+    if not cmd_type then return end
+    if cmd_type == "REP" then
+      local ch, key, val = body:match("^(%d+)%s+([%u_]+)%s+(.*)")
+      if ch and key and val then
+        val = val:match("^{(.*)}$") or val
+        parse_attribute(ch, key, val)
+      end
+    elseif cmd_type == "SAMPLE" then
+      local ch, audPeak, audRms, rfRssi = body:match("^(%d+)%s+ALL%s+(%d+)%s+(%d+)%s+(%d+)")
+      local ch_num = tonumber(ch)
+      if ch_num and ch_num >= 1 and ch_num <= channel_count then
+        if audPeak then Controls["audio_peak_"..ch_num].Value = tonumber(audPeak) - 120 end
+        if rfRssi  then Controls["rssi_"..ch_num].Value       = tonumber(rfRssi)  - 120 end
+      end
+    end
+  end
+
+  local function process_buffer()
+    while true do
+      local s = rx_buffer:find("<", 1, true)
+      local e = rx_buffer:find(">", 1, true)
+      if s and e and e > s then
+        local msg = trim(rx_buffer:sub(s + 1, e - 1))
+        rx_buffer = rx_buffer:sub(e + 1)
+        if msg ~= "" then parse_msg(msg) end
+      else
+        if not s and #rx_buffer > 200 then rx_buffer = "" end
+        break
+      end
+    end
+  end
+
+  for i = 1, channel_count do
+    local s  = tostring(i)
+    local ch = tostring(i)
+
+    Controls["audio_gain_"..s].EventHandler = function(ctrl)
+      local raw = math.max(0, math.min(60, math.floor(ctrl.Value + 18 + 0.5)))
+      send_cmd("SET " .. ch .. " AUDIO_GAIN " .. string.format("%03d", raw))
+    end
+
+    Controls["audio_mute_"..s].EventHandler = function(ctrl)
+      send_cmd("SET " .. ch .. " AUDIO_MUTE " .. (ctrl.Boolean and "ON" or "OFF"))
+    end
+
+    Controls["chan_name_"..s].EventHandler = function(ctrl)
+      local name = ctrl.String:sub(1, 31)
+      send_cmd("SET " .. ch .. " CHAN_NAME {" .. name .. "}")
+    end
+
+    Controls["frequency_"..s].EventHandler = function(ctrl)
+      local raw = ctrl.String:gsub("[^%d]", "")
+      if #raw == 7 then
+        send_cmd("SET " .. ch .. " FREQUENCY " .. raw)
+      else
+        print("[SLXD+] Invalid frequency for ch" .. ch .. ": enter 7-digit kHz e.g. 0518125")
+      end
+    end
+  end
+
+  sock.EventHandler = function(s, evt, err)
+    if evt == TcpSocket.Events.Connected then
+      Controls.connection_state.String = "Connected"
+      Controls.connection_led.Value    = 1
+      rx_buffer = ""
+      print("[SLXD+] Connected to " .. Properties["IP Address"].Value)
+      initialize_device()
+    elseif evt == TcpSocket.Events.Data then
+      rx_buffer = rx_buffer .. s:Read(s.BufferLength)
+      process_buffer()
+    elseif evt == TcpSocket.Events.Closed then
+      Controls.connection_state.String = "Closed"
+      Controls.connection_led.Value    = 0
+      print("[SLXD+] Connection closed")
+    elseif evt == TcpSocket.Events.Error then
+      Controls.connection_state.String = "Error"
+      Controls.connection_led.Value    = 0
+      print("[SLXD+] Error: " .. tostring(err))
+    elseif evt == TcpSocket.Events.Reconnect then
+      Controls.connection_state.String = "Reconnecting..."
+      Controls.connection_led.Value    = 0
+      for i = 1, channel_count do
+        Controls["audio_peak_"..i].Value = -120
+        Controls["rssi_"..i].Value       = -120
+      end
+    end
+  end
+
+  clear_all()
+  local ip = Properties["IP Address"].Value
+  if ip and ip ~= "" then
+    Controls.connection_state.String = "Connecting..."
+    sock.ReconnectTimeout = 5
+    sock:Connect(ip, 2202)
+  else
+    Controls.connection_state.String = "No IP configured"
+  end
+
+  print("[SLXD+] v1.1.0 started | Channels: " .. channel_count .. " | Meter rate: " .. Properties["Meter Rate"].Value)
+
+end
